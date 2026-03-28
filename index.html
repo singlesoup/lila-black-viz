@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LILA BLACK — Player Journey Visualizer</title>
+<style>
+  :root {
+    --bg: #080810;
+    --surface: #10101e;
+    --surface2: #181828;
+    --border: #252538;
+    --border2: #323248;
+    --text: #e0e0f0;
+    --text-dim: #6b6b88;
+    --text-muted: #3a3a55;
+    --accent: #00c8ff;
+    --accent-dim: rgba(0,200,255,0.12);
+    --human: #00c8ff;
+    --bot: #ff7040;
+    --kill: #ff3b3b;
+    --killed: #ff7040;
+    --looted: #ffd700;
+    --storm: #a855f7;
+    --font: 'Inter', system-ui, -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 13px;
+  }
+
+  /* SIDEBAR */
+  #sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .logo {
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo h1 {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .logo p {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  .section {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    margin-top: 10px;
+  }
+
+  label:first-of-type { margin-top: 0; }
+
+  select, input[type=range] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+
+  select:focus, select:hover {
+    border-color: var(--accent);
+  }
+
+  select option {
+    background: #1a1a2e;
+  }
+
+  /* VIEW MODE TABS */
+  .tab-group {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text-dim);
+    font-size: 10px;
+    font-family: var(--font);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 6px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .tab-btn:hover { border-color: var(--border2); color: var(--text); }
+  .tab-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* TOGGLE ROWS */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+
+  .toggle-label { font-size: 11px; color: var(--text-dim); }
+
+  .toggle {
+    width: 32px; height: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+
+  .toggle.on { background: var(--accent-dim); border-color: var(--accent); }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 10px; height: 10px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    top: 2px; left: 2px;
+    transition: left 0.15s, background 0.15s;
+  }
+
+  .toggle.on::after { left: 18px; background: var(--accent); }
+
+  /* LEGEND */
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-line {
+    width: 16px; height: 2px;
+    flex-shrink: 0;
+  }
+
+  /* STATS */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px;
+  }
+
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* MAIN AREA */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #toolbar {
+    height: 44px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .toolbar-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  #match-info {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    flex: 1;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 100px;
+    padding: 3px 10px;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .pill-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+
+  /* MAP CANVAS AREA */
+  #canvas-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #050508;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #canvas-wrap {
+    position: relative;
+    cursor: crosshair;
+  }
+
+  #map-canvas {
+    display: block;
+  }
+
+  #heatmap-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+    display: none;
+  }
+
+  /* LOADING OVERLAY */
+  #loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(8,8,16,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 100;
+    display: none;
+  }
+
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  /* TIMELINE */
+  #timeline-bar {
+    height: 72px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px 12px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #timeline-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ctrl-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    width: 28px; height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    flex-shrink: 0;
+  }
+
+  .ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .ctrl-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  #time-display {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    min-width: 60px;
+    text-align: right;
+  }
+
+  #speed-select {
+    width: 64px;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
+  #progress-wrap {
+    flex: 1;
+    position: relative;
+    height: 28px;
+    display: flex;
+    align-items: center;
+  }
+
+  #progress-track {
+    width: 100%;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+  }
+
+  #progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.05s linear;
+    pointer-events: none;
+  }
+
+  #progress-thumb {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    left: 0%;
+    pointer-events: none;
+    box-shadow: 0 0 8px rgba(0,200,255,0.6);
+  }
+
+  /* EMPTY STATE */
+  #empty-state {
+    text-align: center;
+    padding: 40px;
+  }
+
+  #empty-state h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  #empty-state p {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* TOOLTIP */
+  #tooltip {
+    position: fixed;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 11px;
+    color: var(--text);
+    pointer-events: none;
+    z-index: 200;
+    display: none;
+    max-width: 200px;
+    line-height: 1.6;
+  }
+
+  #tooltip .t-uid { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+
+  /* Heatmap type buttons */
+  .hm-btns { display: flex; gap: 4px; margin-top: 8px; }
+  .hm-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text-dim);
+    font-size: 10px;
+    font-family: var(--font);
+    padding: 5px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .hm-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="logo">
+    <h1>LILA BLACK</h1>
+    <p>Player Journey Visualizer</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Filters</div>
+    <label>Map</label>
+    <select id="sel-map">
+      <option value="AmbroseValley">Ambrose Valley</option>
+      <option value="GrandRift">Grand Rift</option>
+      <option value="Lockdown">Lockdown</option>
+    </select>
+
+    <label>Date</label>
+    <select id="sel-date"></select>
+
+    <label>Match</label>
+    <select id="sel-match"></select>
+  </div>
+
+  <div class="section">
+    <div class="section-title">View Mode</div>
+    <div class="tab-group">
+      <button class="tab-btn active" data-mode="paths">Paths</button>
+      <button class="tab-btn" data-mode="events">Events</button>
+      <button class="tab-btn" data-mode="heatmap">Heatmap</button>
+    </div>
+    <div id="heatmap-opts" style="display:none">
+      <div class="hm-btns">
+        <button class="hm-btn active" data-hm="all">Traffic</button>
+        <button class="hm-btn" data-hm="kills">Kills</button>
+        <button class="hm-btn" data-hm="deaths">Deaths</button>
+        <button class="hm-btn" data-hm="loot">Loot</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Show</div>
+    <div class="toggle-row">
+      <span class="toggle-label" style="display:flex;align-items:center;gap:6px">
+        <span style="width:10px;height:2px;background:var(--human);display:inline-block;border-radius:1px"></span>
+        Human Players
+      </span>
+      <div class="toggle on" id="tog-humans"></div>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label" style="display:flex;align-items:center;gap:6px">
+        <span style="width:10px;height:2px;background:var(--bot);display:inline-block;border-radius:1px;border-top:1px dashed var(--bot)"></span>
+        Bots
+      </span>
+      <div class="toggle on" id="tog-bots"></div>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Kill Events</span>
+      <div class="toggle on" id="tog-kills"></div>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Loot Events</span>
+      <div class="toggle on" id="tog-loot"></div>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Storm Deaths</span>
+      <div class="toggle on" id="tog-storm"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Legend</div>
+    <div class="legend-item">
+      <div class="legend-line" style="background:var(--human)"></div>
+      <span>Human path</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background:var(--bot);border-top:1px dashed var(--bot);height:0;margin-top:1px"></div>
+      <span>Bot path</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--kill)"></div>
+      <span>Kill / PvP</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--killed)"></div>
+      <span>Death</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--looted)"></div>
+      <span>Loot</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--storm)"></div>
+      <span>Storm death</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Match Stats</div>
+    <div class="stat-grid" id="stats-grid">
+      <div class="stat-card"><div class="stat-val" id="st-humans">—</div><div class="stat-label">Humans</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-bots">—</div><div class="stat-label">Bots</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-kills">—</div><div class="stat-label">Kills</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-loots">—</div><div class="stat-label">Loots</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-storm">—</div><div class="stat-label">Storm</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-dur">—</div><div class="stat-label">Duration</div></div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="toolbar">
+    <span class="toolbar-label">Match</span>
+    <span id="match-info">Select a match to begin</span>
+    <span class="pill" id="map-pill">
+      <span class="pill-dot" style="background:var(--accent)"></span>
+      Ambrose Valley
+    </span>
+  </div>
+
+  <div id="canvas-area">
+    <div id="canvas-wrap">
+      <canvas id="map-canvas" width="700" height="700"></canvas>
+      <canvas id="heatmap-canvas" width="700" height="700"></canvas>
+      <div id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading match data…</div>
+      </div>
+    </div>
+    <div id="empty-state" style="position:absolute">
+      <h2>Select a match to explore</h2>
+      <p>Choose a map, date, and match from the sidebar.</p>
+    </div>
+    <div id="tooltip"></div>
+  </div>
+
+  <div id="timeline-bar">
+    <div id="timeline-controls">
+      <button class="ctrl-btn" id="btn-rewind" title="Rewind">⏮</button>
+      <button class="ctrl-btn" id="btn-play" title="Play">▶</button>
+      <button class="ctrl-btn" id="btn-end" title="Jump to end">⏭</button>
+      <div id="progress-wrap">
+        <div id="progress-track">
+          <div id="progress-fill"></div>
+          <div id="progress-thumb"></div>
+        </div>
+      </div>
+      <div id="time-display">0:00</div>
+      <select id="speed-select" class="ctrl-btn" style="width:64px;font-size:11px;padding:4px 6px;cursor:pointer">
+        <option value="0.5">0.5×</option>
+        <option value="1" selected>1×</option>
+        <option value="2">2×</option>
+        <option value="5">5×</option>
+        <option value="10">10×</option>
+        <option value="30">30×</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== CONFIG ======
+const MAP_CFG = {
+  AmbroseValley: { scale: 900, ox: -370, oz: -473, img: 'minimaps/AmbroseValley_Minimap.png' },
+  GrandRift:     { scale: 581, ox: -290, oz: -290, img: 'minimaps/GrandRift_Minimap.png' },
+  Lockdown:      { scale: 1000, ox: -500, oz: -500, img: 'minimaps/Lockdown_Minimap.jpg' }
+};
+
+const DATES = ['2026-02-10','2026-02-11','2026-02-12','2026-02-13','2026-02-14'];
+const DATE_LABELS = {
+  '2026-02-10': 'Feb 10, 2026',
+  '2026-02-11': 'Feb 11, 2026',
+  '2026-02-12': 'Feb 12, 2026',
+  '2026-02-13': 'Feb 13, 2026',
+  '2026-02-14': 'Feb 14, 2026 (partial)'
+};
+
+const MAP_NAMES = { AmbroseValley: 'Ambrose Valley', GrandRift: 'Grand Rift', Lockdown: 'Lockdown' };
+
+const EV_COLORS = {
+  K: '#ff3b3b', Kd: '#ff7040', BK: '#ff3b3b', BKd: '#ff7040',
+  S: '#a855f7', L: '#ffd700'
+};
+
+const CANVAS_SIZE = 700;
+
+// ====== STATE ======
+let state = {
+  map: 'AmbroseValley',
+  date: '2026-02-10',
+  match: null,
+  mode: 'paths',
+  hmType: 'all',
+  showHumans: true,
+  showBots: true,
+  showKills: true,
+  showLoot: true,
+  showStorm: true,
+  currentTime: 1.0,
+  isPlaying: false,
+  speed: 1,
+  matchData: null,
+  meta: null,
+  dateCache: {},
+  minimapImages: {},
+  animFrame: null,
+  lastTimestamp: null,
+  matchDuration: 0
+};
+
+// ====== DOM REFS ======
+const selMap   = document.getElementById('sel-map');
+const selDate  = document.getElementById('sel-date');
+const selMatch = document.getElementById('sel-match');
+const mapCanvas   = document.getElementById('map-canvas');
+const hmCanvas    = document.getElementById('heatmap-canvas');
+const ctx         = mapCanvas.getContext('2d');
+const hmCtx       = hmCanvas.getContext('2d');
+const loadingEl   = document.getElementById('loading');
+const emptyState  = document.getElementById('empty-state');
+const matchInfo   = document.getElementById('match-info');
+const mapPill     = document.getElementById('map-pill');
+const progressFill  = document.getElementById('progress-fill');
+const progressThumb = document.getElementById('progress-thumb');
+const timeDisplay   = document.getElementById('time-display');
+const btnPlay    = document.getElementById('btn-play');
+const btnRewind  = document.getElementById('btn-rewind');
+const btnEnd     = document.getElementById('btn-end');
+const progressTrack = document.getElementById('progress-track');
+const tooltip    = document.getElementById('tooltip');
+const hmOpts     = document.getElementById('heatmap-opts');
+
+// ====== COORDINATE CONVERSION ======
+function worldToCanvas(x, z, mapName) {
+  const cfg = MAP_CFG[mapName];
+  const u = (x - cfg.ox) / cfg.scale;
+  const v = 1 - (z - cfg.oz) / cfg.scale;
+  return [u * CANVAS_SIZE, v * CANVAS_SIZE];
+}
+
+// ====== INIT ======
+async function init() {
+  try {
+    const r = await fetch('data/meta.json');
+    state.meta = await r.json();
+  } catch (e) {
+    console.error('Failed to load meta.json', e);
+  }
+
+  populateDates();
+  await loadMinimapImage(state.map);
+  drawEmpty();
+
+  // Attach events
+  selMap.addEventListener('change', onMapChange);
+  selDate.addEventListener('change', onDateChange);
+  selMatch.addEventListener('change', onMatchChange);
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.mode = btn.dataset.mode;
+      hmOpts.style.display = state.mode === 'heatmap' ? 'block' : 'none';
+      render();
+    });
+  });
+
+  document.querySelectorAll('.hm-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.hm-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.hmType = btn.dataset.hm;
+      if (state.mode === 'heatmap') render();
+    });
+  });
+
+  setupToggles();
+  setupTimeline();
+  setupPlayback();
+}
+
+function populateDates() {
+  selDate.innerHTML = '';
+  DATES.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = DATE_LABELS[d];
+    selDate.appendChild(opt);
+  });
+  state.date = DATES[0];
+}
+
+function populateMatches(matchData) {
+  selMatch.innerHTML = '';
+  const mids = Object.keys(matchData);
+
+  const optAll = document.createElement('option');
+  optAll.value = '__all__';
+  optAll.textContent = `All matches (${mids.length})`;
+  selMatch.appendChild(optAll);
+
+  mids.forEach(mid => {
+    const opt = document.createElement('option');
+    opt.value = mid;
+    const d = matchData[mid];
+    const humans = d.players.filter(p => !p.bot).length;
+    const bots = d.players.filter(p => p.bot).length;
+    opt.textContent = `${mid.slice(0,8)}… (${humans}H+${bots}B)`;
+    selMatch.appendChild(opt);
+  });
+
+  state.match = '__all__';
+}
+
+// ====== MAP CHANGE ======
+async function onMapChange() {
+  state.map = selMap.value;
+  mapPill.innerHTML = `<span class="pill-dot" style="background:var(--accent)"></span>${MAP_NAMES[state.map]}`;
+  state.matchData = null;
+  state.dateCache = {};
+  await loadMinimapImage(state.map);
+  await loadDateData();
+}
+
+async function onDateChange() {
+  state.date = selDate.value;
+  await loadDateData();
+}
+
+async function loadDateData() {
+  const key = `${state.map}_${state.date}`;
+  showLoading(true);
+  try {
+    if (!state.dateCache[key]) {
+      const r = await fetch(`data/${key}.json`);
+      state.dateCache[key] = await r.json();
+    }
+    populateMatches(state.dateCache[key]);
+    await onMatchChange();
+  } catch (e) {
+    console.error('Failed to load data', e);
+    showLoading(false);
+  }
+}
+
+async function onMatchChange() {
+  const key = `${state.map}_${state.date}`;
+  const dateData = state.dateCache[key];
+  if (!dateData) return;
+
+  state.match = selMatch.value;
+  showLoading(true);
+
+  if (state.match === '__all__') {
+    // Aggregate all matches
+    state.matchData = aggregateAll(dateData);
+  } else {
+    state.matchData = dateData[state.match];
+  }
+
+  computeMatchMeta();
+  updateStats();
+  state.currentTime = 1.0;
+  stopPlayback();
+  showLoading(false);
+  emptyState.style.display = 'none';
+  if (state.mode === 'heatmap') {
+    renderHeatmap();
+    hmCanvas.style.display = 'block';
+  } else {
+    hmCanvas.style.display = 'none';
+  }
+  render();
+  updateTimeline();
+}
+
+function aggregateAll(dateData) {
+  const allPlayers = [];
+  Object.values(dateData).forEach(m => {
+    if (m.players) allPlayers.push(...m.players);
+  });
+  return { players: allPlayers };
+}
+
+function computeMatchMeta() {
+  if (!state.matchData) return;
+  let minTs = Infinity, maxTs = -Infinity;
+  state.matchData.players.forEach(p => {
+    p.path.forEach(pt => { minTs = Math.min(minTs, pt[0]); maxTs = Math.max(maxTs, pt[0]); });
+    p.events.forEach(ev => { minTs = Math.min(minTs, ev[0]); maxTs = Math.max(maxTs, ev[0]); });
+  });
+  state.minTs = minTs === Infinity ? 0 : minTs;
+  state.maxTs = maxTs === -Infinity ? 0 : maxTs;
+  state.matchDuration = state.maxTs - state.minTs;
+}
+
+function updateStats() {
+  if (!state.matchData) return;
+  const players = state.matchData.players;
+  const humans = players.filter(p => !p.bot).length;
+  const bots = players.filter(p => p.bot).length;
+  let kills = 0, loots = 0, storm = 0;
+  players.forEach(p => p.events.forEach(ev => {
+    const t = ev[3];
+    if (t === 'K' || t === 'BK') kills++;
+    if (t === 'L') loots++;
+    if (t === 'S') storm++;
+  }));
+  const dur = state.matchDuration;
+  const durStr = dur > 0 ? `${Math.floor(dur/60000)}:${String(Math.floor((dur%60000)/1000)).padStart(2,'0')}` : '—';
+  document.getElementById('st-humans').textContent = humans;
+  document.getElementById('st-bots').textContent = bots;
+  document.getElementById('st-kills').textContent = kills;
+  document.getElementById('st-loots').textContent = loots;
+  document.getElementById('st-storm').textContent = storm;
+  document.getElementById('st-dur').textContent = durStr;
+
+  const mid = state.match === '__all__' ? 'All matches' : state.match.slice(0,16) + '…';
+  matchInfo.textContent = `${mid} · ${humans} humans · ${bots} bots`;
+}
+
+// ====== RENDERING ======
+function render() {
+  if (!state.matchData) { drawEmpty(); return; }
+  if (state.mode === 'heatmap') { renderHeatmap(); return; }
+  drawMap();
+  if (state.mode === 'paths') renderPaths();
+  else if (state.mode === 'events') renderEventsOnly();
+}
+
+function drawEmpty() {
+  ctx.fillStyle = '#050508';
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+}
+
+function drawMap() {
+  const img = state.minimapImages[state.map];
+  if (img && img.complete) {
+    ctx.drawImage(img, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    // Slightly darken for readability
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  } else {
+    ctx.fillStyle = '#0d0d1a';
+    ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  }
+}
+
+function getCurrentTs() {
+  return state.minTs + state.currentTime * state.matchDuration;
+}
+
+function renderPaths() {
+  const cutoffTs = getCurrentTs();
+  const players = state.matchData.players;
+
+  players.forEach(player => {
+    if (player.bot && !state.showBots) return;
+    if (!player.bot && !state.showHumans) return;
+
+    const color = player.bot ? '#ff7040' : '#00c8ff';
+    const alpha = player.bot ? 0.4 : 0.7;
+
+    // Draw path up to cutoff
+    const pts = player.path.filter(pt => pt[0] <= cutoffTs);
+    if (pts.length < 2) return;
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = player.bot ? 1 : 1.5;
+
+    if (player.bot) {
+      ctx.setLineDash([3, 4]);
+    } else {
+      ctx.setLineDash([]);
+    }
+
+    const [sx, sy] = worldToCanvas(pts[0][1], pts[0][2], state.map);
+    ctx.moveTo(sx, sy);
+    for (let i = 1; i < pts.length; i++) {
+      const [px, py] = worldToCanvas(pts[i][1], pts[i][2], state.map);
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // Draw current position dot
+    if (pts.length > 0 && !player.bot) {
+      const last = pts[pts.length - 1];
+      const [lx, ly] = worldToCanvas(last[1], last[2], state.map);
+      ctx.beginPath();
+      ctx.arc(lx, ly, 4, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  });
+
+  // Draw events
+  renderEventMarkers(cutoffTs);
+}
+
+function renderEventsOnly() {
+  const cutoffTs = getCurrentTs();
+  drawMap();
+  renderEventMarkers(cutoffTs);
+}
+
+function renderEventMarkers(cutoffTs) {
+  const players = state.matchData.players;
+  players.forEach(player => {
+    if (player.bot && !state.showBots) return;
+    if (!player.bot && !state.showHumans) return;
+
+    player.events.forEach(ev => {
+      if (ev[0] > cutoffTs) return;
+      const [ts, x, z, evType] = ev;
+      if (!evType) return;
+
+      if ((evType === 'K' || evType === 'BK' || evType === 'Kd' || evType === 'BKd') && !state.showKills) return;
+      if (evType === 'L' && !state.showLoot) return;
+      if (evType === 'S' && !state.showStorm) return;
+
+      const [px, py] = worldToCanvas(x, z, state.map);
+      drawEventMarker(ctx, px, py, evType);
+    });
+  });
+}
+
+function drawEventMarker(c, x, y, type) {
+  const color = EV_COLORS[type] || '#fff';
+  c.save();
+  c.globalAlpha = 0.9;
+
+  if (type === 'K' || type === 'BK') {
+    // X mark for kills
+    c.strokeStyle = color;
+    c.lineWidth = type === 'K' ? 2.5 : 1.5;
+    const r = type === 'K' ? 5 : 3;
+    c.beginPath(); c.moveTo(x-r, y-r); c.lineTo(x+r, y+r); c.stroke();
+    c.beginPath(); c.moveTo(x+r, y-r); c.lineTo(x-r, y+r); c.stroke();
+  } else if (type === 'Kd' || type === 'BKd') {
+    // Circle for deaths
+    const r = type === 'Kd' ? 4 : 3;
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI*2);
+    c.strokeStyle = color; c.lineWidth = 1.5; c.stroke();
+  } else if (type === 'L') {
+    // Diamond for loot
+    const r = 4;
+    c.fillStyle = color;
+    c.beginPath();
+    c.moveTo(x, y-r); c.lineTo(x+r, y); c.lineTo(x, y+r); c.lineTo(x-r, y); c.closePath();
+    c.fill();
+  } else if (type === 'S') {
+    // Triangle for storm
+    const r = 5;
+    c.fillStyle = color;
+    c.beginPath();
+    c.moveTo(x, y-r); c.lineTo(x+r*0.87, y+r*0.5); c.lineTo(x-r*0.87, y+r*0.5); c.closePath();
+    c.fill();
+  }
+
+  c.restore();
+}
+
+// ====== HEATMAP ======
+function renderHeatmap() {
+  drawMap();
+  if (!state.matchData) return;
+
+  const offscreen = document.createElement('canvas');
+  offscreen.width = CANVAS_SIZE;
+  offscreen.height = CANVAS_SIZE;
+  const oc = offscreen.getContext('2d');
+
+  oc.fillStyle = 'black';
+  oc.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+  const players = state.matchData.players;
+  const hmType = state.hmType;
+
+  players.forEach(player => {
+    if (player.bot && !state.showBots) return;
+    if (!player.bot && !state.showHumans) return;
+
+    if (hmType === 'all') {
+      // All positions
+      player.path.forEach(pt => {
+        const [px, py] = worldToCanvas(pt[1], pt[2], state.map);
+        drawHeatBlob(oc, px, py, 14, 0.08);
+      });
+    } else {
+      // Specific events
+      player.events.forEach(ev => {
+        const [ts, x, z, evType] = ev;
+        let include = false;
+        if (hmType === 'kills' && (evType === 'K' || evType === 'BK')) include = true;
+        if (hmType === 'deaths' && (evType === 'Kd' || evType === 'BKd' || evType === 'S')) include = true;
+        if (hmType === 'loot' && evType === 'L') include = true;
+        if (include) {
+          const [px, py] = worldToCanvas(x, z, state.map);
+          drawHeatBlob(oc, px, py, 20, 0.4);
+        }
+      });
+    }
+  });
+
+  // Apply colormap
+  const imageData = oc.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  const d = imageData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const val = d[i]; // brightness (we drew in white)
+    if (val === 0) { d[i+3] = 0; continue; }
+    const t = Math.min(val / 200, 1);
+    const [r, g, b] = heatColor(t);
+    d[i] = r; d[i+1] = g; d[i+2] = b; d[i+3] = Math.min(val * 3, 220);
+  }
+  oc.putImageData(imageData, 0, 0);
+
+  ctx.drawImage(offscreen, 0, 0);
+}
+
+function drawHeatBlob(c, x, y, r, intensity) {
+  const grd = c.createRadialGradient(x, y, 0, x, y, r);
+  grd.addColorStop(0, `rgba(255,255,255,${intensity})`);
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = grd;
+  c.beginPath(); c.arc(x, y, r, 0, Math.PI*2); c.fill();
+}
+
+function heatColor(t) {
+  // blue → cyan → green → yellow → red
+  if (t < 0.25) { const s=t/0.25; return [0, Math.round(s*200), 255]; }
+  if (t < 0.5)  { const s=(t-0.25)/0.25; return [0, 255, Math.round((1-s)*255)]; }
+  if (t < 0.75) { const s=(t-0.5)/0.25; return [Math.round(s*255), 255, 0]; }
+  const s=(t-0.75)/0.25; return [255, Math.round((1-s)*255), 0];
+}
+
+// ====== MINIMAP LOADING ======
+function loadMinimapImage(mapName) {
+  return new Promise(resolve => {
+    if (state.minimapImages[mapName]) { resolve(); return; }
+    const img = new Image();
+    img.onload = () => { state.minimapImages[mapName] = img; resolve(); };
+    img.onerror = () => { console.warn('Could not load minimap for', mapName); resolve(); };
+    img.src = MAP_CFG[mapName].img;
+  });
+}
+
+// ====== TOGGLES ======
+function setupToggles() {
+  function toggle(id, key) {
+    const el = document.getElementById(id);
+    el.addEventListener('click', () => {
+      state[key] = !state[key];
+      el.classList.toggle('on', state[key]);
+      render();
+    });
+  }
+  toggle('tog-humans', 'showHumans');
+  toggle('tog-bots', 'showBots');
+  toggle('tog-kills', 'showKills');
+  toggle('tog-loot', 'showLoot');
+  toggle('tog-storm', 'showStorm');
+}
+
+// ====== TIMELINE ======
+function setupTimeline() {
+  let dragging = false;
+
+  function setTimeFromX(clientX) {
+    const rect = progressTrack.getBoundingClientRect();
+    const t = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    state.currentTime = t;
+    updateTimeline();
+    if (state.mode !== 'heatmap') render();
+  }
+
+  progressTrack.addEventListener('mousedown', e => { dragging = true; setTimeFromX(e.clientX); });
+  document.addEventListener('mousemove', e => { if (dragging) setTimeFromX(e.clientX); });
+  document.addEventListener('mouseup', () => { dragging = false; });
+
+  btnRewind.addEventListener('click', () => { state.currentTime = 0; stopPlayback(); updateTimeline(); render(); });
+  btnEnd.addEventListener('click', () => { state.currentTime = 1; stopPlayback(); updateTimeline(); render(); });
+  document.getElementById('speed-select').addEventListener('change', e => { state.speed = parseFloat(e.target.value); });
+}
+
+function updateTimeline() {
+  const t = state.currentTime;
+  progressFill.style.width = `${t * 100}%`;
+  progressThumb.style.left = `${t * 100}%`;
+  const ms = t * state.matchDuration;
+  const totalMs = state.matchDuration;
+  timeDisplay.textContent = formatTime(ms) + ' / ' + formatTime(totalMs);
+}
+
+function formatTime(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, '0')}`;
+}
+
+// ====== PLAYBACK ======
+function setupPlayback() {
+  btnPlay.addEventListener('click', () => {
+    if (state.isPlaying) stopPlayback();
+    else startPlayback();
+  });
+}
+
+function startPlayback() {
+  if (!state.matchData) return;
+  if (state.currentTime >= 1) state.currentTime = 0;
+  state.isPlaying = true;
+  btnPlay.textContent = '⏸';
+  btnPlay.classList.add('active');
+  state.lastTimestamp = null;
+  state.animFrame = requestAnimationFrame(animLoop);
+}
+
+function stopPlayback() {
+  state.isPlaying = false;
+  btnPlay.textContent = '▶';
+  btnPlay.classList.remove('active');
+  if (state.animFrame) { cancelAnimationFrame(state.animFrame); state.animFrame = null; }
+}
+
+function animLoop(timestamp) {
+  if (!state.isPlaying) return;
+  if (state.lastTimestamp !== null) {
+    const delta = timestamp - state.lastTimestamp;
+    const realDuration = state.matchDuration;
+    if (realDuration > 0) {
+      const advance = (delta / realDuration) * state.speed;
+      state.currentTime = Math.min(1, state.currentTime + advance);
+    }
+  }
+  state.lastTimestamp = timestamp;
+  updateTimeline();
+  if (state.mode !== 'heatmap') render();
+  if (state.currentTime >= 1) {
+    stopPlayback();
+    return;
+  }
+  state.animFrame = requestAnimationFrame(animLoop);
+}
+
+// ====== UTILS ======
+function showLoading(show) {
+  loadingEl.style.display = show ? 'flex' : 'none';
+}
+
+// ====== START ======
+init().then(() => {
+  loadDateData();
+});
+</script>
+</body>
+</html>
