@@ -949,8 +949,8 @@ function renderPaths() {
     const color = player.bot ? '#ff7040' : '#00c8ff';
     const alpha = player.bot ? 0.4 : 0.7;
 
-    // Draw path up to cutoff
-    const pts = player.path.filter(pt => pt[0] <= cutoffTs);
+    // Draw path up to cutoff, skipping any points with null coords
+    const pts = player.path.filter(pt => pt[0] <= cutoffTs && pt[1] != null && pt[2] != null);
     if (pts.length < 2) return;
 
     ctx.beginPath();
@@ -1078,6 +1078,7 @@ function renderHeatmap() {
     if (hmType === 'all') {
       // All positions
       player.path.forEach(pt => {
+        if (pt[1] == null || pt[2] == null) return;
         const [px, py] = worldToCanvas(pt[1], pt[2], state.map);
         drawHeatBlob(oc, px, py, 14, 0.08);
       });
@@ -1089,7 +1090,7 @@ function renderHeatmap() {
         if (hmType === 'kills' && (evType === 'K' || evType === 'BK')) include = true;
         if (hmType === 'deaths' && (evType === 'Kd' || evType === 'BKd' || evType === 'S')) include = true;
         if (hmType === 'loot' && evType === 'L') include = true;
-        if (include) {
+        if (include && x != null && z != null) {
           const [px, py] = worldToCanvas(x, z, state.map);
           drawHeatBlob(oc, px, py, 20, 0.4);
         }
