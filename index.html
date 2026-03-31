@@ -989,13 +989,13 @@ function renderPaths() {
   // Single match: fixed high alpha. All-matches: scale by player count.
   let humanAlpha, botAlpha;
   if (state.match !== '__all__') {
-    humanAlpha = 0.85;
-    botAlpha   = 0.75;
+    humanAlpha = 1.0;
+    botAlpha   = 0.85;
   } else {
     const humanCount = Math.max(1, players.filter(p => !p.bot).length);
     const botCount   = Math.max(1, players.filter(p =>  p.bot).length);
-    humanAlpha = Math.min(0.7, 8 / humanCount);
-    botAlpha   = Math.min(0.5, 6 / botCount);
+    humanAlpha = Math.min(0.9, 15 / humanCount);
+    botAlpha   = Math.min(0.7, 12 / botCount);
   }
 
   players.forEach(player => {
@@ -1012,7 +1012,7 @@ function renderPaths() {
     ctx.beginPath();
     ctx.strokeStyle = color;
     ctx.globalAlpha = alpha;
-    ctx.lineWidth = player.bot ? 1 : 1.5;
+    ctx.lineWidth = player.bot ? 1.5 : 2;
     if (player.bot) { ctx.setLineDash([3, 4]); } else { ctx.setLineDash([]); }
 
     // Pen-lift approach: skip any point whose canvas coordinate is corrupt
