@@ -978,7 +978,7 @@ function renderPaths() {
     const color = player.bot ? '#ff7040' : '#00c8ff';
     const alpha = player.bot ? botAlpha : humanAlpha;
 
-    // Draw path up to cutoff, skipping any points with null coords
+    // Draw path up to cutoff, skipping null coords
     const pts = player.path.filter(pt => pt[0] <= cutoffTs && pt[1] != null && pt[2] != null);
     if (pts.length < 2) return;
 
@@ -986,29 +986,34 @@ function renderPaths() {
     ctx.strokeStyle = color;
     ctx.globalAlpha = alpha;
     ctx.lineWidth = player.bot ? 1 : 1.5;
+    if (player.bot) { ctx.setLineDash([3, 4]); } else { ctx.setLineDash([]); }
 
-    if (player.bot) {
-      ctx.setLineDash([3, 4]);
-    } else {
-      ctx.setLineDash([]);
-    }
-
-    const [sx, sy] = worldToCanvas(pts[0][1], pts[0][2], state.map);
-    ctx.moveTo(sx, sy);
-    for (let i = 1; i < pts.length; i++) {
-      const [px, py] = worldToCanvas(pts[i][1], pts[i][2], state.map);
-      ctx.lineTo(px, py);
+    // Pen-lift approach: skip any point whose canvas coordinate is corrupt
+    // (astronomically large floats from bad telemetry pass null-check but
+    //  produce px/py values like 1e18 that Canvas clips as a full-canvas beam)
+    const MARGIN = 100; // px beyond canvas edge still allowed
+    let penDown = false;
+    let lastValidPx = 0, lastValidPy = 0;
+    for (const pt of pts) {
+      const [px, py] = worldToCanvas(pt[1], pt[2], state.map);
+      if (!isFinite(px) || !isFinite(py) ||
+          px < -MARGIN || px > CANVAS_SIZE + MARGIN ||
+          py < -MARGIN || py > CANVAS_SIZE + MARGIN) {
+        penDown = false; // lift pen — resume at next valid point
+        continue;
+      }
+      if (!penDown) { ctx.moveTo(px, py); penDown = true; }
+      else          { ctx.lineTo(px, py); }
+      lastValidPx = px; lastValidPy = py;
     }
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.globalAlpha = 1;
 
-    // Draw current position dot
-    if (pts.length > 0 && !player.bot) {
-      const last = pts[pts.length - 1];
-      const [lx, ly] = worldToCanvas(last[1], last[2], state.map);
+    // Draw current position dot at last valid canvas point
+    if (penDown && !player.bot) {
       ctx.beginPath();
-      ctx.arc(lx, ly, 4, 0, Math.PI * 2);
+      ctx.arc(lastValidPx, lastValidPy, 4, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,0.5)';
@@ -1109,10 +1114,13 @@ function renderHeatmap() {
     if (!player.bot && !state.showHumans) return;
 
     if (hmType === 'all') {
-      // All positions
+      // All positions — same OOB guard as path renderer
       player.path.forEach(pt => {
         if (pt[1] == null || pt[2] == null) return;
         const [px, py] = worldToCanvas(pt[1], pt[2], state.map);
+        if (!isFinite(px) || !isFinite(py) ||
+            px < -100 || px > CANVAS_SIZE + 100 ||
+            py < -100 || py > CANVAS_SIZE + 100) return;
         drawHeatBlob(oc, px, py, 14, 0.08);
       });
     } else {
