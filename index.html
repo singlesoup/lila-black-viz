@@ -259,6 +259,25 @@
     text-transform: uppercase;
   }
 
+  #btn-export {
+    margin-left: auto;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text-dim);
+    font-size: 11px;
+    font-family: var(--font);
+    padding: 5px 11px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  #btn-export:hover { border-color: var(--accent); color: var(--accent); }
+  #btn-export:disabled { opacity: 0.5; cursor: default; }
+
   #match-info {
     font-family: var(--mono);
     font-size: 11px;
@@ -602,6 +621,7 @@
   <div id="toolbar">
     <span class="toolbar-label">Match</span>
     <span id="match-info">Select a match to begin</span>
+    <button id="btn-export" title="Export current view as PNG">⬇ Export PNG</button>
     <span class="pill" id="map-pill">
       <span class="pill-dot" style="background:var(--accent)"></span>
       Ambrose Valley
@@ -773,6 +793,7 @@ async function init() {
   setupTimeline();
   setupPlayback();
   setupPanZoom();
+  setupExport();
 }
 
 function populateDates() {
@@ -1339,6 +1360,57 @@ function setupPanZoom() {
 // ====== UTILS ======
 function showLoading(show) {
   loadingEl.style.display = show ? 'flex' : 'none';
+}
+
+// ====== EXPORT ======
+function setupExport() {
+  const btn = document.getElementById('btn-export');
+  btn.addEventListener('click', () => {
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      // Composite both canvases: map/paths below, heatmap overlay on top
+      const composite = document.createElement('canvas');
+      composite.width  = CANVAS_SIZE;
+      composite.height = CANVAS_SIZE;
+      const cc = composite.getContext('2d');
+      cc.drawImage(mapCanvas, 0, 0);
+      if (hmCanvas.style.display !== 'none') {
+        cc.drawImage(hmCanvas, 0, 0);
+      }
+
+      // Build filename from current state
+      const matchPart = state.match === '__all__' ? 'all'
+        : state.match ? state.match.slice(0, 8) : 'none';
+      const filename = `lila_${state.map}_${state.date}_${matchPart}_${state.mode}.png`;
+
+      composite.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        btn.disabled = false;
+        btn.innerHTML = '⬇ Export PNG';
+      }, 'image/png');
+    } catch (e) {
+      // Canvas taint (cross-origin image) — only happens without a server
+      btn.disabled = false;
+      btn.innerHTML = '⬇ Export PNG';
+      const msg = document.createElement('span');
+      msg.style.cssText = 'color:var(--kill);font-size:10px;margin-left:8px';
+      msg.textContent = 'Export unavailable — open via server';
+      const toolbar = document.getElementById('toolbar');
+      const existing = toolbar.querySelector('.export-err');
+      if (!existing) {
+        msg.className = 'export-err';
+        toolbar.appendChild(msg);
+        setTimeout(() => msg.remove(), 4000);
+      }
+    }
+  });
 }
 
 // ====== START ======
