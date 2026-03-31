@@ -965,11 +965,17 @@ function renderPaths() {
   const cutoffTs = getCurrentTs();
   const players = state.matchData.players;
 
-  // Scale alpha down when many players are shown so paths don't flood solid
-  const humanCount = Math.max(1, players.filter(p => !p.bot).length);
-  const botCount   = Math.max(1, players.filter(p =>  p.bot).length);
-  const humanAlpha = Math.min(0.75, Math.max(0.04, 5 / humanCount));
-  const botAlpha   = Math.min(0.40, Math.max(0.03, 3 / botCount));
+  // Single match: fixed high alpha. All-matches: scale by player count.
+  let humanAlpha, botAlpha;
+  if (state.match !== '__all__') {
+    humanAlpha = 0.85;
+    botAlpha   = 0.75;
+  } else {
+    const humanCount = Math.max(1, players.filter(p => !p.bot).length);
+    const botCount   = Math.max(1, players.filter(p =>  p.bot).length);
+    humanAlpha = Math.min(0.7, 8 / humanCount);
+    botAlpha   = Math.min(0.5, 6 / botCount);
+  }
 
   players.forEach(player => {
     if (player.bot && !state.showBots) return;
