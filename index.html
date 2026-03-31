@@ -648,6 +648,9 @@
   </div>
 </div>
 
+<!-- Embedded data (minimaps + JSON) — enables file:// protocol usage -->
+<script src="embedded_data.js"></script>
+
 <script>
 // ====== CONFIG ======
 const MAP_CFG = {
@@ -733,8 +736,7 @@ function worldToCanvas(x, z, mapName) {
 // ====== INIT ======
 async function init() {
   try {
-    const r = await fetch('data/meta.json');
-    state.meta = await r.json();
+    state.meta = EMBEDDED_DATA['meta'];
   } catch (e) {
     console.error('Failed to load meta.json', e);
   }
@@ -827,8 +829,7 @@ async function loadDateData() {
   showLoading(true);
   try {
     if (!state.dateCache[key]) {
-      const r = await fetch(`data/${key}.json`);
-      state.dateCache[key] = await r.json();
+      state.dateCache[key] = EMBEDDED_DATA[key];
     }
     populateMatches(state.dateCache[key]);
     await onMatchChange();
@@ -1073,12 +1074,15 @@ function drawEventMarker(c, x, y, type) {
     c.moveTo(x, y-r); c.lineTo(x+r, y); c.lineTo(x, y+r); c.lineTo(x-r, y); c.closePath();
     c.fill();
   } else if (type === 'S') {
-    // Triangle for storm
-    const r = 5;
-    c.fillStyle = color;
+    // Triangle for storm — larger with outline so it's visible over path lines
+    const r = 9;
     c.beginPath();
     c.moveTo(x, y-r); c.lineTo(x+r*0.87, y+r*0.5); c.lineTo(x-r*0.87, y+r*0.5); c.closePath();
+    c.fillStyle = color;
     c.fill();
+    c.strokeStyle = 'rgba(255,255,255,0.85)';
+    c.lineWidth = 1.5;
+    c.stroke();
   }
 
   c.restore();
@@ -1165,7 +1169,9 @@ function loadMinimapImage(mapName) {
     const img = new Image();
     img.onload = () => { state.minimapImages[mapName] = img; resolve(); };
     img.onerror = () => { console.warn('Could not load minimap for', mapName); resolve(); };
-    img.src = MAP_CFG[mapName].img;
+    img.src = (typeof EMBEDDED_MINIMAPS !== 'undefined' && EMBEDDED_MINIMAPS[mapName])
+      ? EMBEDDED_MINIMAPS[mapName]
+      : MAP_CFG[mapName].img;
   });
 }
 
