@@ -562,8 +562,18 @@
       <div class="toggle on" id="tog-bots"></div>
     </div>
     <div class="toggle-row">
-      <span class="toggle-label">Kill Events</span>
-      <div class="toggle on" id="tog-kills"></div>
+      <span class="toggle-label" style="display:flex;align-items:center;gap:6px">
+        <span style="color:#ff3b3b;font-size:11px;font-weight:700">✕</span>
+        PvP Kills
+      </span>
+      <div class="toggle on" id="tog-pvp-kills"></div>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label" style="display:flex;align-items:center;gap:6px">
+        <span style="color:#ff7040;font-size:11px;font-weight:700">✕</span>
+        Bot Kills
+      </span>
+      <div class="toggle on" id="tog-bot-kills"></div>
     </div>
     <div class="toggle-row">
       <span class="toggle-label">Loot Events</span>
@@ -586,8 +596,12 @@
       <span>Bot path</span>
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:var(--kill)"></div>
-      <span>Kill / PvP</span>
+      <span style="color:#ff3b3b;font-size:13px;font-weight:700;line-height:1;width:12px;text-align:center">✕</span>
+      <span>PvP Kill (human)</span>
+    </div>
+    <div class="legend-item">
+      <span style="color:#ff7040;font-size:11px;font-weight:700;line-height:1;width:12px;text-align:center">✕</span>
+      <span>Bot Kill</span>
     </div>
     <div class="legend-item">
       <div class="legend-dot" style="background:var(--killed)"></div>
@@ -608,7 +622,7 @@
     <div class="stat-grid" id="stats-grid">
       <div class="stat-card"><div class="stat-val" id="st-humans">—</div><div class="stat-label">Humans</div></div>
       <div class="stat-card"><div class="stat-val" id="st-bots">—</div><div class="stat-label">Bots</div></div>
-      <div class="stat-card"><div class="stat-val" id="st-kills">—</div><div class="stat-label">Kills</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-kills">—</div><div class="stat-label">PvP Kills</div></div>
       <div class="stat-card"><div class="stat-val" id="st-loots">—</div><div class="stat-label">Loots</div></div>
       <div class="stat-card"><div class="stat-val" id="st-storm">—</div><div class="stat-label">Storm</div></div>
       <div class="stat-card"><div class="stat-val" id="st-dur">—</div><div class="stat-label">Duration</div></div>
@@ -691,7 +705,8 @@ const DATE_LABELS = {
 const MAP_NAMES = { AmbroseValley: 'Ambrose Valley', GrandRift: 'Grand Rift', Lockdown: 'Lockdown' };
 
 const EV_COLORS = {
-  K: '#ff3b3b', Kd: '#ff7040', BK: '#ff3b3b', BKd: '#ff7040',
+  K: '#ff3b3b', Kd: '#ff3b3b',   // PvP (human vs human) — bright red
+  BK: '#ff7040', BKd: '#ff7040', // Bot kills (human vs bot) — muted orange
   S: '#a855f7', L: '#ffd700'
 };
 
@@ -706,7 +721,8 @@ let state = {
   hmType: 'all',
   showHumans: true,
   showBots: true,
-  showKills: true,
+  showPvpKills: true,
+  showBotKills: true,
   showLoot: true,
   showStorm: true,
   currentTime: 1.0,
@@ -919,7 +935,7 @@ function updateStats() {
   let kills = 0, loots = 0, storm = 0;
   players.forEach(p => p.events.forEach(ev => {
     const t = ev[3];
-    if (t === 'K' || t === 'BK') kills++;
+    if (t === 'K') kills++;   // PvP only — not BK (bot kills)
     if (t === 'L') loots++;
     if (t === 'S') storm++;
   }));
@@ -1071,7 +1087,8 @@ function renderEventMarkers(cutoffTs) {
       if (!evType) return;
       if (x == null || z == null) return;
 
-      if ((evType === 'K' || evType === 'BK' || evType === 'Kd' || evType === 'BKd') && !state.showKills) return;
+      if ((evType === 'K'  || evType === 'Kd')  && !state.showPvpKills) return;
+      if ((evType === 'BK' || evType === 'BKd') && !state.showBotKills) return;
       if (evType === 'L' && !state.showLoot) return;
       if (evType === 'S' && !state.showStorm) return;
 
@@ -1220,11 +1237,12 @@ function setupToggles() {
       render();
     });
   }
-  toggle('tog-humans', 'showHumans');
-  toggle('tog-bots', 'showBots');
-  toggle('tog-kills', 'showKills');
-  toggle('tog-loot', 'showLoot');
-  toggle('tog-storm', 'showStorm');
+  toggle('tog-humans',    'showHumans');
+  toggle('tog-bots',      'showBots');
+  toggle('tog-pvp-kills', 'showPvpKills');
+  toggle('tog-bot-kills', 'showBotKills');
+  toggle('tog-loot',      'showLoot');
+  toggle('tog-storm',     'showStorm');
 }
 
 // ====== TIMELINE ======
