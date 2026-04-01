@@ -1383,7 +1383,8 @@ function setupExport() {
       // Build filename from current state
       const matchPart = state.match === '__all__' ? 'all'
         : state.match ? state.match.slice(0, 8) : 'none';
-      const filename = `lila_${state.map}_${state.date}_${matchPart}_${state.mode}.png`;
+      const modePart = state.mode === 'heatmap' ? `heatmap_${state.hmType}` : state.mode;
+      const filename = `lila_${state.map}_${state.date}_${matchPart}_${modePart}.png`;
 
       composite.toBlob(blob => {
         const url = URL.createObjectURL(blob);
