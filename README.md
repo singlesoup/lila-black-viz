@@ -2,7 +2,7 @@
 
 A web-based tool for LILA BLACK level designers to explore player movement, combat, and loot patterns across all 3 maps.
 
-**Live demo:** *(deploy URL goes here)*
+**🌐 Live app (GitHub Pages):** [https://singlesoup.github.io/lila-black-viz/](https://singlesoup.github.io/lila-black-viz/)
 
 ---
 
@@ -41,12 +41,15 @@ npx vercel --prod
 ### Netlify
 Drag-and-drop the `lila-viz/` folder to netlify.app/drop
 
-### GitHub Pages
+### GitHub Pages *(current deployment)*
+The app is hosted at **https://singlesoup.github.io/lila-black-viz/** from the `main` branch of [singlesoup/lila-black-viz](https://github.com/singlesoup/lila-black-viz).
+
+To deploy your own fork:
 ```bash
 git init && git add . && git commit -m "Initial commit"
-git remote add origin https://github.com/yourname/lila-viz
+git remote add origin https://github.com/yourname/lila-black-viz
 git push -u origin main
-# Enable Pages in repo settings → Pages → Deploy from branch (main)
+# Enable Pages in repo settings → Pages → Deploy from branch (main / root)
 ```
 
 ---
